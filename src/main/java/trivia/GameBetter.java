@@ -5,9 +5,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-// REFACTOR ME
 public class GameBetter implements IGame {
    private static final int MAX_PLAYERS = 4;
+   public static final int COINS_TO_WIN = 6;
    private final List<Player> players = new ArrayList<>(MAX_PLAYERS);
 
    private final Queue<String> popQuestions = new LinkedList<>();
@@ -21,18 +21,10 @@ public class GameBetter implements IGame {
    public GameBetter() {
       for (int i = 0; i < 50; i++) {
          popQuestions.add("Pop Question " + i);
-         scienceQuestions.add(("Science Question " + i));
-         sportsQuestions.add(("Sports Question " + i));
-         rockQuestions.add(createRockQuestion(i));
+         scienceQuestions.add("Science Question " + i);
+         sportsQuestions.add("Sports Question " + i);
+         rockQuestions.add("Rock Question " + i);
       }
-   }
-
-   public String createRockQuestion(int index) {
-      return "Rock Question " + index;
-   }
-
-   public boolean isPlayable() {
-      return (howManyPlayers() >= 2);
    }
 
    public boolean add(String playerName) {
@@ -44,43 +36,30 @@ public class GameBetter implements IGame {
       return true;
    }
 
-   public int howManyPlayers() {
-      return players.size();
-   }
-
    public void roll(int roll) {
       Player currentPlayer = players.get(currentPlayerIndex);
       String currentPlayerName = currentPlayer.getName();
       System.out.println(currentPlayerName + " is the current player");
       System.out.println("They have rolled a " + roll);
 
-      if (currentPlayer.isInPenaltyBox()) {
-         if (roll % 2 != 0) {
-            isGettingOutOfPenaltyBox = true;
+      isGettingOutOfPenaltyBox = (roll % 2 != 0);
 
-            System.out.println(currentPlayerName + " is getting out of the penalty box");
-            currentPlayer.increasePositionByRoll(roll);
-
-            System.out.println(currentPlayerName
-                               + "'s new location is "
-                               + currentPlayer.getPosition());
-            System.out.println("The category is " + currentCategory());
-            askQuestion();
-         } else {
-            System.out.println(currentPlayerName + " is not getting out of the penalty box");
-            isGettingOutOfPenaltyBox = false;
-         }
-
-      } else {
-
-         currentPlayer.increasePositionByRoll(roll);
-
-         System.out.println(currentPlayerName
-                            + "'s new location is "
-                            + currentPlayer.getPosition());
-         System.out.println("The category is " + currentCategory());
-         askQuestion();
+      if (currentPlayer.isInPenaltyBox() && !isGettingOutOfPenaltyBox) {
+         System.out.println(currentPlayerName + " is not getting out of the penalty box");
+         return;
       }
+
+      if (currentPlayer.isInPenaltyBox()) {
+         System.out.println(currentPlayerName + " is getting out of the penalty box");
+      }
+
+      currentPlayer.increasePositionByRoll(roll);
+
+      System.out.println(currentPlayerName
+              + "'s new location is "
+              + currentPlayer.getPosition());
+      System.out.println("The category is " + currentCategory());
+      askQuestion();
 
    }
 
@@ -114,41 +93,42 @@ public class GameBetter implements IGame {
 
    public boolean wasCorrectlyAnswered() {
       var player = players.get(currentPlayerIndex);
-      if (player.isInPenaltyBox()) {
-         if (isGettingOutOfPenaltyBox) {
-            System.out.println("Answer was correct!!!!");
-            player.increaseCoin();
-            System.out.println(player.getName()
-                               + " now has "
-                               + player.getCoins()
-                               + " Gold Coins.");
 
-            boolean winner = didPlayerWin();
-            currentPlayerIndex++;
-            if (currentPlayerIndex == players.size()) currentPlayerIndex = 0;
-
-            return winner;
-         } else {
-            currentPlayerIndex++;
-            if (currentPlayerIndex == players.size()) currentPlayerIndex = 0;
-            return true;
-         }
-
-
-      } else {
-
-         System.out.println("Answer was corrent!!!!");
+      if (player.isInPenaltyBox() && isGettingOutOfPenaltyBox) {
+         System.out.println("Answer was correct!!!!");
          player.increaseCoin();
          System.out.println(player.getName()
-                            + " now has "
-                            + player.getCoins()
-                            + " Gold Coins.");
+                 + " now has "
+                 + player.getCoins()
+                 + " Gold Coins.");
 
-         boolean winner = didPlayerWin();
-         currentPlayerIndex++;
-         if (currentPlayerIndex == players.size()) currentPlayerIndex = 0;
+         moveToNextPlayer();
 
-         return winner;
+         return shouldGameContinue(player);
+      }
+
+      if (player.isInPenaltyBox()) {
+         moveToNextPlayer();
+         return true;
+      }
+
+      System.out.println("Answer was corrent!!!!");
+      player.increaseCoin();
+      System.out.println(player.getName()
+                         + " now has "
+                         + player.getCoins()
+                         + " Gold Coins.");
+
+      moveToNextPlayer();
+
+      return shouldGameContinue(player);
+
+   }
+
+   private void moveToNextPlayer() {
+      currentPlayerIndex++;
+      if (currentPlayerIndex == players.size()) {
+         currentPlayerIndex = 0;
       }
    }
 
@@ -158,14 +138,12 @@ public class GameBetter implements IGame {
       System.out.println(player.getName() + " was sent to the penalty box");
       player.setInPenaltyBox(true);
 
-      currentPlayerIndex++;
-      if (currentPlayerIndex == players.size()) currentPlayerIndex = 0;
+      moveToNextPlayer();
       return true;
    }
 
 
-   private boolean didPlayerWin() {
-      var player = players.get(currentPlayerIndex);
-      return !(player.getCoins() == 6);
+   private boolean shouldGameContinue(Player currentPlayer) {
+      return currentPlayer.getCoins() < COINS_TO_WIN;
    }
 }
